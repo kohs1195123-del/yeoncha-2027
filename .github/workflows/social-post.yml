@@ -1,4 +1,4 @@
-name: 스레드 자동 게시
+name: SNS 자동 게시
 
 on:
   schedule:
@@ -22,8 +22,10 @@ jobs:
       - name: 다음 글 올리기
         env:
           THREADS_TOKEN: ${{ secrets.THREADS_TOKEN }}
-        run: python threads/post_threads.py
+          IG_TOKEN: ${{ secrets.IG_TOKEN }}
+        run: python threads/post_social.py
       - name: 게시 위치 저장
+        if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

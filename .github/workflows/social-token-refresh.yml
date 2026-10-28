@@ -1,0 +1,27 @@
+name: SNS 토큰 갱신
+
+# 장기 토큰은 60일마다 만료돼서, 매달 1일과 15일에 갱신해 시크릿을 바꿔 둔다.
+# 시크릿을 바꾸려면 GH_PAT(이 저장소의 Secrets 쓰기 권한이 있는 토큰)이 필요하다.
+on:
+  schedule:
+    - cron: "0 0 1,15 * *"
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 토큰 갱신
+        env:
+          THREADS_TOKEN: ${{ secrets.THREADS_TOKEN }}
+          IG_TOKEN: ${{ secrets.IG_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          refresh() {
+            NEW=$(curl -sf "$1" | python3 -c "import sys,json;print(json.load(sys.stdin)['access_token'])") || return 1
+            echo "::add-mask::$NEW"
+            gh secret set "$2" --repo "$GITHUB_REPOSITORY" --body "$NEW"
+            echo "$2 갱신 완료"
+          }
+          if [ -n "$THREADS_TOKEN" ]; then refresh "https://graph.threads.net/refresh_access_token?grant_type=th_refresh_token&access_token=${THREADS_TOKEN}" THREADS_TOKEN; fi
+          if [ -n "$IG_TOKEN" ]; then refresh "https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=${IG_TOKEN}" IG_TOKEN; fi
