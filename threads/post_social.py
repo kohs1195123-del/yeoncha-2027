@@ -47,26 +47,25 @@ def main():
     if not th and not ig:
         sys.exit("THREADS_TOKEN이나 IG_TOKEN 시크릿이 없어요.")
     posts = json.load(open(POSTS, encoding="utf-8"))
-    state = json.load(open(STATE)) if os.path.exists(STATE) else {"next": 0}
-    i = state["next"]
-    if i >= len(posts):
-        print("올릴 글이 다 떨어졌어요. posts.json에 새 글을 추가해 주세요.")
-        return
+    state = json.load(open(STATE)) if os.path.exists(STATE) else {}
     failed = []
-    for name, token, fn in (("스레드", th, lambda t: to_threads(posts[i], t)),
-                            ("인스타그램", ig, lambda t: to_instagram(posts[i], i + 1, t))):
+    for key, name, token in (("threads", "스레드", th), ("instagram", "인스타그램", ig)):
         if not token:
             continue
+        i = state.get(key, 0)  # 플랫폼마다 따로 기록해서, 나중에 연결한 쪽도 1번 글부터 올린다
+        if i >= len(posts):
+            print(f"{name}: 올릴 글이 다 떨어졌어요. posts.json에 새 글을 추가해 주세요.")
+            continue
         try:
-            print(f"{name}: {i + 1}/{len(posts)}번 게시 완료 ({fn(token)})")
+            pid = to_threads(posts[i], token) if key == "threads" else to_instagram(posts[i], i + 1, token)
+            print(f"{name}: {i + 1}/{len(posts)}번 게시 완료 ({pid})")
+            state[key] = i + 1
         except Exception as e:  # 한쪽이 실패해도 다른 쪽은 올린다
             print(f"{name}: {e}")
             failed.append(name)
-    state["next"] = i + 1
     json.dump(state, open(STATE, "w"))
     if failed:
         sys.exit(f"실패: {', '.join(failed)}")
-
 
 if __name__ == "__main__":
     main()
