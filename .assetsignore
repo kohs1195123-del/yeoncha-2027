@@ -3,3 +3,6 @@ README.md
 wrangler.jsonc
 .gitignore
 .git
+threads
+.github
+.assetsignore
