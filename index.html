@@ -7,6 +7,7 @@
 <meta property="og:title" content="2027 연차 꿀조합 계산기">
 <meta property="og:description" content="내 연차로 2027년에 며칠 쉴 수 있을까? 추석 연차 2개로 9일, 연차 15개로 43일.">
 <meta property="og:type" content="website">
+<meta property="og:url" content="https://yeoncha-2027.kohs1195123.workers.dev/">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>2027 연차 꿀조합</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -320,7 +321,7 @@ footer { color: var(--muted); font-size: 12px; }
       g.fillStyle = "#6b7180"; g.font = "500 26px 'IBM Plex Sans KR', sans-serif"; g.fillText(reason(w) + " · 연차 " + w.cost + "개", 280, y + 84);
       y += 116;
     });
-    g.fillStyle = "#6b7180"; g.font = "500 28px 'IBM Plex Sans KR', sans-serif"; g.fillText("나도 계산해 보기 → 2027 연차 꿀조합", 80, H - 60);
+    g.fillStyle = "#6b7180"; g.font = "500 28px 'IBM Plex Sans KR', sans-serif"; g.fillText("나도 계산해 보기 → yeoncha-2027.kohs1195123.workers.dev", 80, H - 60);
     try { $("shareImg").src = c.toDataURL("image/png"); } catch (e) {}
   }
 
@@ -328,7 +329,7 @@ footer { color: var(--muted); font-size: 12px; }
     const p = current.picked.slice().sort((a, b) => a.s - b.s);
     const total = p.reduce((a, w) => a + w.len, 0);
     return "연차 " + current.B + "개로 2027년에 " + total + "일 쉰다!\n" +
-      p.map(w => "· " + fmt(w.s) + " ~ " + fmt(w.e) + " " + w.len + "일 (연차 " + w.cost + ")").join("\n");
+      p.map(w => "· " + fmt(w.s) + " ~ " + fmt(w.e) + " " + w.len + "일 (연차 " + w.cost + ")").join("\n") + "\n\n나도 계산해 보기 👉 https://yeoncha-2027.kohs1195123.workers.dev";
   }
   function toast(id, msg) { const t = $(id); t.textContent = msg; setTimeout(() => { if (t.textContent === msg) t.textContent = ""; }, 2500); }
 
