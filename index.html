@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="연차 개수만 넣으면 2027년 공휴일·대체공휴일에 맞춰 가장 길게 쉬는 연차 조합을 짜 드려요.">
+<meta property="og:title" content="2027 연차 꿀조합 계산기">
+<meta property="og:description" content="내 연차로 2027년에 며칠 쉴 수 있을까? 추석 연차 2개로 9일, 연차 15개로 43일.">
+<meta property="og:type" content="website">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>2027 연차 꿀조합</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: 탁상 달력 한 장 — 위에는 결과 요약(연차 → 쉬는 날), 아래에는 12개월 미니 달력. 빨간날은 진짜 빨강. */
+:root {
+  --paper: #fbfaf7;
+  --sheet: #ffffff;
+  --ink: #1c2230;
+  --muted: #6b7180;
+  --line: #e4e2dc;
+  --red: #d8342c;
+  --red-soft: #fde6e3;
+  --leave: #1f6feb;
+  --leave-soft: #dfeafe;
+  --span: #fff3c4;
+  --font-display: "Black Han Sans", "IBM Plex Sans KR", sans-serif;
+  --font-body: "IBM Plex Sans KR", -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #14171e; --sheet: #1b1f28; --ink: #ecedf0; --muted: #9aa0ad; --line: #2c313c;
+    --red: #ff6b5f; --red-soft: #3a1f1e; --leave: #6ea8ff; --leave-soft: #1d2b44; --span: #3a3320;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #14171e; --sheet: #1b1f28; --ink: #ecedf0; --muted: #9aa0ad; --line: #2c313c;
+  --red: #ff6b5f; --red-soft: #3a1f1e; --leave: #6ea8ff; --leave-soft: #1d2b44; --span: #3a3320;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--paper); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 56px;
+}
+.wrap { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+header { display: flex; flex-direction: column; gap: 10px; }
+.eyebrow { font-size: 12px; letter-spacing: .08em; color: var(--muted); font-weight: 500; }
+h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(34px, 7vw, 56px); line-height: 1.1; margin: 0; text-wrap: balance; }
+h1 .red { color: var(--red); }
+.lede { margin: 0; color: var(--muted); max-width: 60ch; }
+
+.control { background: var(--sheet); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: center; }
+.control label { font-weight: 700; }
+.stepper { display: flex; align-items: center; gap: 10px; }
+.stepper button { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); font-size: 20px; cursor: pointer; }
+.stepper button:focus-visible, .btn:focus-visible, input:focus-visible { outline: 2px solid var(--leave); outline-offset: 2px; }
+.stepper output { font-family: var(--font-num); font-size: 28px; font-weight: 600; min-width: 2.2ch; text-align: center; font-variant-numeric: tabular-nums; }
+input[type=range] { flex: 1 1 200px; min-width: 0; accent-color: var(--leave); }
+
+.result { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 20px; }
+@media (max-width: 760px) { .result { grid-template-columns: minmax(0, 1fr); } }
+.big { display: flex; flex-direction: column; gap: 6px; padding: 22px; background: var(--sheet); border: 1px solid var(--line); border-radius: 14px; }
+.big .num { font-family: var(--font-display); font-size: clamp(64px, 14vw, 104px); line-height: 1; color: var(--red); }
+.big .num small { font-size: .35em; color: var(--ink); margin-left: 4px; }
+.big .sub { color: var(--muted); }
+.big .sub b { color: var(--ink); font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.btn { border: 1px solid var(--ink); background: var(--ink); color: var(--paper); padding: 10px 14px; border-radius: 10px; font: inherit; font-weight: 700; cursor: pointer; }
+.btn.ghost { background: transparent; color: var(--ink); }
+
+.breaks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.brk { display: grid; grid-template-columns: 4.2em minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 14px; background: var(--sheet); border: 1px solid var(--line); border-radius: 12px; }
+.brk .days { font-family: var(--font-display); font-size: 26px; color: var(--red); line-height: 1; }
+.brk .days small { font-size: 13px; color: var(--muted); font-family: var(--font-body); margin-left: 2px; }
+.brk .when { font-weight: 700; }
+.brk .why { color: var(--muted); font-size: 13px; }
+.chip { font-family: var(--font-num); font-size: 12px; padding: 4px 8px; border-radius: 999px; background: var(--leave-soft); color: var(--leave); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+h2 { font-family: var(--font-display); font-weight: 400; font-size: 26px; margin: 0; }
+.sec { display: flex; flex-direction: column; gap: 12px; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--muted); }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 5px; }
+
+.months { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 900px) { .months { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 620px) { .months { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.month { background: var(--sheet); border: 1px solid var(--line); border-radius: 12px; padding: 10px; }
+.month h3 { margin: 0 0 6px; font-size: 14px; font-weight: 700; }
+.grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; font-family: var(--font-num); font-size: 11.5px; text-align: center; font-variant-numeric: tabular-nums; }
+.grid .dow { color: var(--muted); font-size: 10px; }
+.grid .d { padding: 3px 0; border-radius: 5px; }
+.d.sun, .d.hol { color: var(--red); font-weight: 600; }
+.d.sat { color: var(--muted); }
+.d.inspan { background: var(--span); }
+.d.leave { background: var(--leave); color: #fff; font-weight: 600; }
+.d.hol.inspan { background: var(--red-soft); }
+
+.share { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 620px) { .share { grid-template-columns: minmax(0, 1fr); } }
+.share img { width: 100%; border-radius: 12px; border: 1px solid var(--line); }
+.note { color: var(--muted); font-size: 13px; margin: 0; }
+.diary { background: var(--ink); color: var(--paper); border-radius: 14px; padding: 22px; display: flex; flex-direction: column; gap: 8px; }
+.diary h2 { color: var(--paper); }
+.diary p { margin: 0; max-width: 60ch; opacity: .85; }
+.diary .btn { background: var(--red); border-color: var(--red); color: #fff; align-self: flex-start; }
+.toast { min-height: 1.4em; font-size: 13px; color: var(--leave); }
+footer { color: var(--muted); font-size: 12px; }
+@media (prefers-reduced-motion: no-preference) { .brk { transition: transform .15s; } .brk:hover { transform: translateX(2px); } }
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">2027 연차 꿀조합 계산기</div>
+    <h1>연차 <span id="hLeave">15</span>개로 2027년에<br><span class="red" id="hDays">—</span> 쉴 수 있어요</h1>
+    <p class="lede">2027년 빨간날과 대체공휴일에 맞춰, 내 연차를 어디에 붙여야 가장 길게 쉬는지 자동으로 짜 드려요. 주 5일(토·일 휴무) 직장인 기준이에요.</p>
+  </header>
+
+  <section class="control" aria-label="연차 개수">
+    <label for="leaveRange">내 연차</label>
+    <div class="stepper">
+      <button type="button" id="minus" aria-label="연차 하나 줄이기">−</button>
+      <output id="leaveOut" for="leaveRange">15</output>
+      <button type="button" id="plus" aria-label="연차 하나 늘리기">+</button>
+    </div>
+    <input type="range" id="leaveRange" min="1" max="25" value="15">
+  </section>
+
+  <section class="result">
+    <div class="big">
+      <div class="eyebrow">연휴로 쉬는 날 합계</div>
+      <div class="num"><span id="totalDays">0</span><small>일</small></div>
+      <div class="sub">연차 <b id="usedLeave">0</b>개 사용 · 가장 긴 연휴 <b id="longest">0</b>일 · 남는 연차 <b id="leftLeave">0</b>개</div>
+      <div class="actions">
+        <button class="btn" type="button" id="copyBtn">결과 텍스트 복사</button>
+        <a class="btn ghost" href="#share">공유 이미지 보기</a>
+      </div>
+      <div class="toast" id="toast" role="status"></div>
+    </div>
+    <div class="sec">
+      <div class="eyebrow">추천 연휴 계획</div>
+      <ul class="breaks" id="breaks"></ul>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>2027 달력</h2>
+    <div class="legend">
+      <span><i style="background:var(--red)"></i>공휴일·일요일</span>
+      <span><i style="background:var(--leave)"></i>연차 쓰는 날</span>
+      <span><i style="background:var(--span)"></i>쉬는 기간</span>
+    </div>
+    <div class="months" id="months"></div>
+  </section>
+
+  <section class="sec" id="share">
+    <h2>공유 이미지</h2>
+    <div class="share">
+      <img id="shareImg" alt="내 2027 연차 계획 요약 이미지">
+      <div class="sec">
+        <p class="note">휴대폰에서는 이미지를 길게 눌러 저장하고 스레드나 인스타 스토리에 올려 보세요. 연차 개수를 바꾸면 이미지도 바로 바뀌어요.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="diary">
+    <h2>이 계획 그대로 다이어리로 받기</h2>
+    <p>내 연차 날짜와 2027 연휴가 미리 표시된 굿노트·프린트용 다이어리 PDF를 준비하고 있어요.</p>
+    <button class="btn" type="button" id="diaryBtn">출시되면 알려 주세요</button>
+    <div class="toast" id="diaryToast" role="status" style="color:inherit"></div>
+  </section>
+
+  <footer>2026년 10월 기준 관공서 공휴일(노동절·제헌절 포함, 대체공휴일 반영)으로 계산했어요. 임시공휴일이 새로 지정되면 결과가 달라질 수 있어요.</footer>
+</div>
+
+<script>
+(function () {
+  const YEAR = 2027;
+  const HOL = {
+    "1-1": "신정", "2-5": "설날 연휴", "2-6": "설날", "2-7": "설날 연휴", "2-8": "설날 대체공휴일",
+    "3-1": "삼일절", "5-1": "노동절", "5-3": "노동절 대체공휴일", "5-5": "어린이날", "5-13": "부처님오신날",
+    "6-6": "현충일", "7-17": "제헌절", "7-19": "제헌절 대체공휴일", "8-15": "광복절", "8-16": "광복절 대체공휴일",
+    "9-14": "추석 연휴", "9-15": "추석", "9-16": "추석 연휴", "10-3": "개천절", "10-4": "개천절 대체공휴일",
+    "10-9": "한글날", "10-11": "한글날 대체공휴일", "12-25": "성탄절", "12-27": "성탄절 대체공휴일"
+  };
+  const DOW = ["일", "월", "화", "수", "목", "금", "토"];
+
+  // 하루 단위 배열
+  const days = [];
+  for (let t = Date.UTC(YEAR, 0, 1); new Date(t).getUTCFullYear() === YEAR; t += 864e5) {
+    const d = new Date(t), m = d.getUTCMonth() + 1, dd = d.getUTCDate(), w = d.getUTCDay();
+    const hol = HOL[m + "-" + dd] || null;
+    days.push({ m, d: dd, w, hol, off: w === 0 || w === 6 || !!hol });
+  }
+  const N = days.length;
+
+  // 쉬는 날 덩어리
+  const blocks = [];
+  for (let i = 0; i < N; i++) {
+    if (!days[i].off) continue;
+    let j = i;
+    while (j + 1 < N && days[j + 1].off) j++;
+    blocks.push({ s: i, e: j });
+    i = j;
+  }
+
+  // 후보 연휴: 덩어리 i부터 j까지 이어 붙이기
+  const wins = [];
+  for (let i = 0; i < blocks.length; i++) {
+    let offCount = 0;
+    for (let j = i; j < blocks.length; j++) {
+      offCount += blocks[j].e - blocks[j].s + 1;
+      const s = blocks[i].s, e = blocks[j].e, len = e - s + 1;
+      if (len > 23) break;
+      const cost = len - offCount;
+      if (cost >= 1 && cost <= 25) wins.push({ s, e, len, cost, score: Math.round(Math.pow(len, 1.3) * 1000) - cost }); // 긴 연휴에 가중치
+    }
+  }
+  wins.sort((a, b) => a.e - b.e || a.s - b.s);
+  const ends = wins.map(w => w.e);
+  const before = wins.map(w => { let lo = 0, hi = wins.length; while (lo < hi) { const mid = (lo + hi) >> 1; if (ends[mid] < w.s) lo = mid + 1; else hi = mid; } return lo; });
+
+  function plan(B) {
+    const n = wins.length;
+    const dp = Array.from({ length: n + 1 }, () => new Array(B + 1).fill(0));
+    for (let k = 1; k <= n; k++) {
+      const w = wins[k - 1], q = before[k - 1];
+      for (let b = 0; b <= B; b++) {
+        let v = dp[k - 1][b];
+        if (w.cost <= b) { const t = dp[q][b - w.cost] + w.score; if (t > v) v = t; }
+        dp[k][b] = v;
+      }
+    }
+    const picked = [];
+    let k = n, b = B;
+    while (k > 0) {
+      if (dp[k][b] === dp[k - 1][b]) { k--; continue; }
+      const w = wins[k - 1]; picked.push(w); b -= w.cost; k = before[k - 1];
+    }
+    return picked.reverse();
+  }
+
+  const fmt = i => days[i].m + "/" + days[i].d + "(" + DOW[days[i].w] + ")";
+  function reason(w) {
+    const names = [];
+    for (let i = w.s; i <= w.e; i++) { const h = days[i].hol; if (h) { const base = h.replace(/ 연휴| 대체공휴일/, ""); if (!names.includes(base)) names.push(base); } }
+    return names.length ? names.join(" · ") : "주말 붙이기";
+  }
+
+  const $ = id => document.getElementById(id);
+  let current = { B: 15, picked: [] };
+
+  function render(B) {
+    const picked = plan(B);
+    current = { B, picked };
+    const used = picked.reduce((a, w) => a + w.cost, 0);
+    const total = picked.reduce((a, w) => a + w.len, 0);
+    const longest = picked.reduce((a, w) => Math.max(a, w.len), 0);
+    $("hLeave").textContent = B; $("leaveOut").textContent = B; $("leaveRange").value = B;
+    $("hDays").textContent = total + "일";
+    $("totalDays").textContent = total; $("usedLeave").textContent = used; $("longest").textContent = longest; $("leftLeave").textContent = B - used;
+
+    const ul = $("breaks"); ul.innerHTML = "";
+    picked.slice().sort((a, b) => b.len - a.len || a.s - b.s).forEach(w => {
+      const li = document.createElement("li"); li.className = "brk";
+      li.innerHTML = '<div class="days">' + w.len + '<small>일</small></div>' +
+        '<div><div class="when">' + fmt(w.s) + ' ~ ' + fmt(w.e) + '</div><div class="why">' + reason(w) + '</div></div>' +
+        '<span class="chip">연차 ' + w.cost + '</span>';
+      ul.appendChild(li);
+    });
+
+    const inSpan = new Uint8Array(N), leave = new Uint8Array(N);
+    picked.forEach(w => { for (let i = w.s; i <= w.e; i++) { inSpan[i] = 1; if (!days[i].off) leave[i] = 1; } });
+    const box = $("months"); box.innerHTML = "";
+    for (let m = 1; m <= 12; m++) {
+      const el = document.createElement("div"); el.className = "month";
+      let html = "<h3>" + m + "월</h3><div class='grid'>" + DOW.map(x => "<div class='dow'>" + x + "</div>").join("");
+      const first = days.findIndex(x => x.m === m);
+      for (let k = 0; k < days[first].w; k++) html += "<div></div>";
+      for (let i = first; i < N && days[i].m === m; i++) {
+        const x = days[i], c = ["d"];
+        if (x.w === 0) c.push("sun"); else if (x.w === 6) c.push("sat");
+        if (x.hol) c.push("hol");
+        if (inSpan[i]) c.push("inspan");
+        if (leave[i]) c.push("leave");
+        html += "<div class='" + c.join(" ") + "'" + (x.hol ? " title='" + x.hol + "'" : "") + ">" + x.d + "</div>";
+      }
+      el.innerHTML = html + "</div>";
+      box.appendChild(el);
+    }
+    drawShare(B, total, longest, picked);
+    try { localStorage.setItem("yeoncha-B", String(B)); } catch (e) {}
+  }
+
+  function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+  function drawShare(B, total, longest, picked) {
+    const W = 1080, H = 1350, c = document.createElement("canvas"); c.width = W; c.height = H;
+    const g = c.getContext("2d");
+    g.fillStyle = "#fbfaf7"; g.fillRect(0, 0, W, H);
+    g.fillStyle = "#d8342c"; g.fillRect(0, 0, W, 18);
+    g.fillStyle = "#6b7180"; g.font = "500 36px 'IBM Plex Sans KR', sans-serif"; g.fillText("2027 연차 꿀조합", 80, 130);
+    g.fillStyle = "#1c2230"; g.font = "88px 'Black Han Sans', sans-serif"; g.fillText("연차 " + B + "개로", 80, 250);
+    g.fillStyle = "#d8342c"; g.font = "200px 'Black Han Sans', sans-serif"; g.fillText(total + "일", 72, 450);
+    g.fillStyle = "#1c2230"; g.font = "88px 'Black Han Sans', sans-serif"; g.fillText("쉰다", 80, 560);
+    g.fillStyle = "#6b7180"; g.font = "500 34px 'IBM Plex Sans KR', sans-serif"; g.fillText("가장 긴 연휴 " + longest + "일", 80, 625);
+    const top = picked.slice().sort((a, b) => b.len - a.len || a.s - b.s).slice(0, 5);
+    let y = 720;
+    top.forEach(w => {
+      g.fillStyle = "#ffffff"; g.strokeStyle = "#e4e2dc"; g.lineWidth = 2;
+      g.beginPath(); g.roundRect ? g.roundRect(80, y, W - 160, 100, 20) : g.rect(80, y, W - 160, 100); g.fill(); g.stroke();
+      g.fillStyle = "#d8342c"; g.font = "56px 'Black Han Sans', sans-serif"; g.fillText(w.len + "일", 110, y + 70);
+      g.fillStyle = "#1c2230"; g.font = "700 34px 'IBM Plex Sans KR', sans-serif"; g.fillText(fmt(w.s) + " ~ " + fmt(w.e), 280, y + 50);
+      g.fillStyle = "#6b7180"; g.font = "500 26px 'IBM Plex Sans KR', sans-serif"; g.fillText(reason(w) + " · 연차 " + w.cost + "개", 280, y + 84);
+      y += 116;
+    });
+    g.fillStyle = "#6b7180"; g.font = "500 28px 'IBM Plex Sans KR', sans-serif"; g.fillText("나도 계산해 보기 → 2027 연차 꿀조합", 80, H - 60);
+    try { $("shareImg").src = c.toDataURL("image/png"); } catch (e) {}
+  }
+
+  function summaryText() {
+    const p = current.picked.slice().sort((a, b) => a.s - b.s);
+    const total = p.reduce((a, w) => a + w.len, 0);
+    return "연차 " + current.B + "개로 2027년에 " + total + "일 쉰다!\n" +
+      p.map(w => "· " + fmt(w.s) + " ~ " + fmt(w.e) + " " + w.len + "일 (연차 " + w.cost + ")").join("\n");
+  }
+  function toast(id, msg) { const t = $(id); t.textContent = msg; setTimeout(() => { if (t.textContent === msg) t.textContent = ""; }, 2500); }
+
+  $("leaveRange").addEventListener("input", e => render(+e.target.value));
+  $("minus").addEventListener("click", () => render(Math.max(1, current.B - 1)));
+  $("plus").addEventListener("click", () => render(Math.min(25, current.B + 1)));
+  $("copyBtn").addEventListener("click", () => {
+    const text = summaryText();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => toast("toast", "복사했어요. 스레드에 붙여 넣어 보세요."), () => toast("toast", "복사가 막혀 있어요. 아래 이미지를 저장해 주세요."));
+    } else toast("toast", "복사가 막혀 있어요. 아래 이미지를 저장해 주세요.");
+  });
+  $("diaryBtn").addEventListener("click", () => toast("diaryToast", "알림 신청 기능은 곧 열려요. 관심 가져 주셔서 고마워요!"));
+
+  let start = 15;
+  try { const s = parseInt(localStorage.getItem("yeoncha-B"), 10); if (s >= 1 && s <= 25) start = s; } catch (e) {}
+  render(start);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => drawShare(current.B, current.picked.reduce((a, w) => a + w.len, 0), current.picked.reduce((a, w) => Math.max(a, w.len), 0), current.picked));
+})();
+</script>
+
+</body>
+</html>
