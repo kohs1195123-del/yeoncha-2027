@@ -166,11 +166,65 @@ def month_grid(c, days, marks, month, x, y, w, h, big, link_prefix=None):
             label = "연차" if marks["leave"][i] else (d["hol"] or "")
             if label:
                 c.drawString(cx + 6, cy + ch - 30, label[:7])
+            c.linkAbsolute("", f"w{week_of(days, i)}", (cx, cy, cx + cw, cy + ch))
         else:
             c.setFont("Bold" if d["hol"] or marks["leave"][i] else "Body", 7)
             c.drawCentredString(cx + cw / 2, cy + ch / 2 - 2.5, str(d["date"].day))
     if link_prefix:
         c.linkAbsolute("", f"{link_prefix}{month}", (x, y - h, x + w, y + 14))
+
+
+def week_of(days, i):
+    """월요일 시작 주 번호. 0번 주는 1월 1일이 들어 있는 주."""
+    return (i + days[0]["date"].weekday()) // 7
+
+
+def week_page(c, days, marks, picked, k):
+    off = days[0]["date"].weekday()
+    idx = [k * 7 + j - off for j in range(7)]
+    real = [i for i in idx if 0 <= i < len(days)]
+    first, last = days[real[0]]["date"], days[real[-1]]["date"]
+    page_bg(c)
+    c.bookmarkPage(f"w{k}")
+    c.setFillColor(INK)
+    c.setFont("Display", 34)
+    c.drawString(48, H - 82, f"{first.month}/{first.day} ~ {last.month}/{last.day}")
+    c.setFillColor(MUTED)
+    c.setFont("Body", 11)
+    c.drawRightString(W - 48, H - 76, f"← {first.month}월로")
+    c.linkAbsolute("", f"m{first.month}", (W - 140, H - 82, W - 44, H - 64))
+    top, row = H - 112, (H - 112 - 48) / 7
+    for j, i in enumerate(idx):
+        y0 = top - (j + 1) * row
+        c.setStrokeColor(LINE)
+        c.setLineWidth(0.8)
+        c.line(48, y0, W - 48, y0)
+        if not 0 <= i < len(days):
+            continue
+        d = days[i]
+        if marks["span"][i]:
+            c.setFillColor(RED_SOFT if d["hol"] else SPAN)
+            c.rect(48, y0 + 1, 118, row - 2, stroke=0, fill=1)
+        if marks["leave"][i]:
+            c.setFillColor(LEAVE)
+            c.rect(48, y0 + 1, 118, row - 2, stroke=0, fill=1)
+        wd = d["date"].weekday()
+        color = HexColor("#ffffff") if marks["leave"][i] else (RED if wd == 6 or d["hol"] else (MUTED if wd == 5 else INK))
+        c.setFillColor(color)
+        c.setFont("Display", 40)
+        c.drawString(60, y0 + row - 50, str(d["date"].day))
+        c.setFont("Bold", 12)
+        c.drawString(60, y0 + row - 70, DOW[wd] + "요일")
+        tag = "연차" if marks["leave"][i] else (d["hol"] or "")
+        if tag:
+            c.setFont("Body", 10)
+            c.drawString(60, y0 + 12, tag[:9])
+        c.setStrokeColor(LINE)
+        c.setLineWidth(0.5)
+        for t in range(1, 4):
+            ly = y0 + row - t * (row / 4)
+            c.line(184, ly, W - 48, ly)
+    c.showPage()
 
 
 def make(budget, out):
@@ -235,7 +289,7 @@ def make(budget, out):
     c.drawString(48, H - 80, "2027 한눈에")
     c.setFont("Body", 10)
     c.setFillColor(MUTED)
-    c.drawString(48, H - 102, "월을 누르면 그 달 페이지로 이동해요.  파랑 = 연차, 노랑 = 쉬는 기간, 빨강 = 공휴일")
+    c.drawString(48, H - 102, "월을 누르면 월간으로, 월간에서 날짜를 누르면 주간 페이지로 이동해요.  파랑 = 연차, 노랑 = 쉬는 기간, 빨강 = 공휴일")
     gw, gh = (W - 96 - 40) / 3, 190
     for m in range(1, 13):
         r, col = divmod(m - 1, 3)
@@ -280,6 +334,10 @@ def make(budget, out):
             c.line(48, yy, W - 48, yy)
             yy -= 30
         c.showPage()
+
+    # 주간 페이지 (월간 달력의 날짜를 누르면 이동)
+    for k in range(week_of(days, len(days) - 1) + 1):
+        week_page(c, days, marks, picked, k)
     c.save()
     return total
 
