@@ -108,7 +108,7 @@ h2 { font-family: var(--font-display); font-weight: 400; font-size: 26px; margin
 .diary { background: var(--ink); color: var(--paper); border-radius: 14px; padding: 22px; display: flex; flex-direction: column; gap: 8px; }
 .diary h2 { color: var(--paper); }
 .diary p { margin: 0; max-width: 60ch; opacity: .85; }
-.diary .btn { background: var(--red); border-color: var(--red); color: #fff; align-self: flex-start; }
+.diary .btn { background: var(--red); border-color: var(--red); color: #fff; align-self: flex-start; text-decoration: none; }
 .toast { min-height: 1.4em; font-size: 13px; color: var(--leave); }
 footer { color: var(--muted); font-size: 12px; }
 @media (prefers-reduced-motion: no-preference) { .brk { transition: transform .15s; } .brk:hover { transform: translateX(2px); } }
@@ -173,9 +173,8 @@ footer { color: var(--muted); font-size: 12px; }
 
   <section class="diary">
     <h2>이 계획 그대로 다이어리로 받기</h2>
-    <p>내 연차 날짜와 2027 연휴가 미리 표시된 굿노트·프린트용 다이어리 PDF를 준비하고 있어요.</p>
-    <button class="btn" type="button" id="diaryBtn">출시되면 알려 주세요</button>
-    <div class="toast" id="diaryToast" role="status" style="color:inherit"></div>
+    <p>내 연차 날짜와 2027 연휴가 미리 표시된 굿노트·프린트용 다이어리 PDF예요. 연차 1~25개 버전 25개, 각 67쪽(연간·월간·주간)이 들어 있어요.</p>
+    <a class="btn" href="https://kohs1195.gumroad.com/l/yeoncha2027" target="_blank" rel="noopener">다이어리 받기 · 6,900원</a>
   </section>
 
   <footer>2026년 10월 기준 관공서 공휴일(노동절·제헌절 포함, 대체공휴일 반영)으로 계산했어요. 임시공휴일이 새로 지정되면 결과가 달라질 수 있어요.</footer>
@@ -342,7 +341,6 @@ footer { color: var(--muted); font-size: 12px; }
       navigator.clipboard.writeText(text).then(() => toast("toast", "복사했어요. 스레드에 붙여 넣어 보세요."), () => toast("toast", "복사가 막혀 있어요. 아래 이미지를 저장해 주세요."));
     } else toast("toast", "복사가 막혀 있어요. 아래 이미지를 저장해 주세요.");
   });
-  $("diaryBtn").addEventListener("click", () => toast("diaryToast", "알림 신청 기능은 곧 열려요. 관심 가져 주셔서 고마워요!"));
 
   let start = 15;
   try { const s = parseInt(localStorage.getItem("yeoncha-B"), 10); if (s >= 1 && s <= 25) start = s; } catch (e) {}
