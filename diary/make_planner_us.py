@@ -73,14 +73,23 @@ def plan(days, budget):
         off = 0
         for b in range(a, len(blocks)):
             off += blocks[b][1] - blocks[b][0] + 1
-            s, e = blocks[a][0], blocks[b][1]
-            length = e - s + 1
-            if length > 23:
+            s0, e0 = blocks[a][0], blocks[b][1]
+            if e0 - s0 + 1 > 23:
                 break
-            cost = length - off
-            if 1 <= cost <= MAXB:
-                wins.append({"s": s, "e": e, "len": length, "cost": cost,
-                             "score": round(length ** 1.3 * 1000) - cost})
+            # Also try adding a few PTO days before or after, so a plain long weekend can grow
+            lo = blocks[a - 1][1] + 2 if a > 0 else 0
+            hi = blocks[b + 1][0] - 2 if b + 1 < len(blocks) else n - 1
+            for xb in range(0, 5):
+                for xa in range(0, 5):
+                    s, e = s0 - xb, e0 + xa
+                    if s < lo or e > hi:
+                        continue
+                    length = e - s + 1
+                    cost = length - off
+                    has_hol = any(days[i]["hol"] for i in range(s, e + 1))
+                    if length <= 23 and 1 <= cost <= MAXB and has_hol:
+                        wins.append({"s": s, "e": e, "len": length, "cost": cost,
+                                     "score": round(length ** 1.3 * 1000) - cost})
     wins.sort(key=lambda w: (w["e"], w["s"]))
     ends = [w["e"] for w in wins]
     before = [bisect.bisect_left(ends, w["s"]) for w in wins]
@@ -276,19 +285,22 @@ def make(budget, out, hset="fed"):
     c.setFillColor(MUTED)
     c.setFont("Body", 15)
     c.drawString(64, H - 505, f"{used} PTO used · longest break {longest} days · {budget - used} PTO left")
-    y = H - 580
-    for w in sorted(picked, key=lambda w: w["s"])[:10]:
+    ws = sorted(picked, key=lambda w: w["s"])
+    two = len(ws) > 6  # two columns when there are many breaks
+    for k, w in enumerate(ws[:12]):
+        x = 64 + (k // 6) * 330 if two else 64
+        y = H - 580 - (k % 6 if two else k) * 52
+        tx = x + (70 if two else 96)
         c.setFillColor(RED)
-        c.setFont("Display", 30)
-        c.drawString(64, y, f"{w['len']}d")
+        c.setFont("Display", 24 if two else 30)
+        c.drawString(x, y, f"{w['len']}d")
         c.setFillColor(INK)
-        c.setFont("Bold", 15)
-        c.drawString(160, y + 8, f"{fmt(days, w['s'])} – {fmt(days, w['e'])}")
+        c.setFont("Bold", 12 if two else 15)
+        c.drawString(tx, y + 8, f"{fmt(days, w['s'])} – {fmt(days, w['e'])}")
         c.setFillColor(MUTED)
-        c.setFont("Body", 11)
-        c.drawString(160, y - 9, f"{reason(days, w)} · {w['cost']} PTO")
-        c.linkAbsolute("", f"m{days[w['s']]['date'].month}", (60, y - 14, W - 60, y + 30))
-        y -= 52
+        c.setFont("Body", 10 if two else 11)
+        c.drawString(tx, y - 8, f"{reason(days, w)[:34]} · {w['cost']} PTO")
+        c.linkAbsolute("", f"m{days[w['s']]['date'].month}", (x - 4, y - 14, x + (320 if two else W - 128), y + 30))
     c.setFillColor(MUTED)
     c.setFont("Body", 10)
     note = ("2027 observed US federal holidays." if hset == "fed" else

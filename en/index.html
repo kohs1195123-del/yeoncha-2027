@@ -229,10 +229,18 @@ footer { color: var(--muted); font-size: 12px; }
       let offCount = 0;
       for (let j = i; j < blocks.length; j++) {
         offCount += blocks[j].e - blocks[j].s + 1;
-        const s = blocks[i].s, e = blocks[j].e, len = e - s + 1;
-        if (len > 23) break;
-        const cost = len - offCount;
-        if (cost >= 1 && cost <= MAXB) wins.push({ s, e, len, cost, score: Math.round(Math.pow(len, 1.3) * 1000) - cost }); // favor longer breaks
+        const s0 = blocks[i].s, e0 = blocks[j].e;
+        if (e0 - s0 + 1 > 23) break;
+        // also try a few PTO days before or after, so a plain long weekend can grow
+        const lo = i > 0 ? blocks[i - 1].e + 2 : 0, hi = j + 1 < blocks.length ? blocks[j + 1].s - 2 : N - 1;
+        for (let xb = 0; xb < 5; xb++) for (let xa = 0; xa < 5; xa++) {
+          const s = s0 - xb, e = e0 + xa;
+          if (s < lo || e > hi) continue;
+          const len = e - s + 1, cost = len - offCount;
+          let hasHol = false;
+          for (let k = s; k <= e; k++) if (days[k].hol) { hasHol = true; break; }
+          if (len <= 23 && cost >= 1 && cost <= MAXB && hasHol) wins.push({ s, e, len, cost, score: Math.round(Math.pow(len, 1.3) * 1000) - cost }); // favor longer breaks
+        }
       }
     }
     wins.sort((a, b) => a.e - b.e || a.s - b.s);
