@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Enter your PTO days and get the 2027 plan that turns them into the most days off, built around US federal holidays.">
+<meta property="og:title" content="2027 PTO Hack Planner">
+<meta property="og:description" content="How many days off can your PTO get you in 2027? Plug in your number and see the best bridge days.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://yeoncha-2027.kohs1195123.workers.dev/en/">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>2027 PTO Hack Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Sans:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: 탁상 달력 한 장 — 위에는 결과 요약(연차 → 쉬는 날), 아래에는 12개월 미니 달력. 빨간날은 진짜 빨강. */
+:root {
+  --paper: #fbfaf7;
+  --sheet: #ffffff;
+  --ink: #1c2230;
+  --muted: #6b7180;
+  --line: #e4e2dc;
+  --red: #d8342c;
+  --red-soft: #fde6e3;
+  --leave: #1f6feb;
+  --leave-soft: #dfeafe;
+  --span: #fff3c4;
+  --font-display: "Archivo Black", "IBM Plex Sans", sans-serif;
+  --font-body: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #14171e; --sheet: #1b1f28; --ink: #ecedf0; --muted: #9aa0ad; --line: #2c313c;
+    --red: #ff6b5f; --red-soft: #3a1f1e; --leave: #6ea8ff; --leave-soft: #1d2b44; --span: #3a3320;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #14171e; --sheet: #1b1f28; --ink: #ecedf0; --muted: #9aa0ad; --line: #2c313c;
+  --red: #ff6b5f; --red-soft: #3a1f1e; --leave: #6ea8ff; --leave-soft: #1d2b44; --span: #3a3320;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--paper); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 56px;
+}
+.wrap { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+header { display: flex; flex-direction: column; gap: 10px; }
+.eyebrow { font-size: 12px; letter-spacing: .08em; color: var(--muted); font-weight: 500; }
+h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(34px, 7vw, 56px); line-height: 1.1; margin: 0; text-wrap: balance; }
+h1 .red { color: var(--red); }
+.lede { margin: 0; color: var(--muted); max-width: 60ch; }
+
+.control { background: var(--sheet); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: center; }
+.control label { font-weight: 700; }
+.stepper { display: flex; align-items: center; gap: 10px; }
+.stepper button { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); font-size: 20px; cursor: pointer; }
+.stepper button:focus-visible, .btn:focus-visible, input:focus-visible { outline: 2px solid var(--leave); outline-offset: 2px; }
+.stepper output { font-family: var(--font-num); font-size: 28px; font-weight: 600; min-width: 2.2ch; text-align: center; font-variant-numeric: tabular-nums; }
+input[type=range] { flex: 1 1 200px; min-width: 0; accent-color: var(--leave); }
+
+.result { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 20px; }
+@media (max-width: 760px) { .result { grid-template-columns: minmax(0, 1fr); } }
+.big { display: flex; flex-direction: column; gap: 6px; padding: 22px; background: var(--sheet); border: 1px solid var(--line); border-radius: 14px; }
+.big .num { font-family: var(--font-display); font-size: clamp(64px, 14vw, 104px); line-height: 1; color: var(--red); }
+.big .num small { font-size: .35em; color: var(--ink); margin-left: 4px; }
+.big .sub { color: var(--muted); }
+.big .sub b { color: var(--ink); font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.btn { border: 1px solid var(--ink); background: var(--ink); color: var(--paper); padding: 10px 14px; border-radius: 10px; font: inherit; font-weight: 700; cursor: pointer; }
+.btn.ghost { background: transparent; color: var(--ink); }
+
+.breaks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.brk { display: grid; grid-template-columns: 4.2em minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 14px; background: var(--sheet); border: 1px solid var(--line); border-radius: 12px; }
+.brk .days { font-family: var(--font-display); font-size: 26px; color: var(--red); line-height: 1; }
+.brk .days small { font-size: 13px; color: var(--muted); font-family: var(--font-body); margin-left: 2px; }
+.brk .when { font-weight: 700; }
+.brk .why { color: var(--muted); font-size: 13px; }
+.chip { font-family: var(--font-num); font-size: 12px; padding: 4px 8px; border-radius: 999px; background: var(--leave-soft); color: var(--leave); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+h2 { font-family: var(--font-display); font-weight: 400; font-size: 26px; margin: 0; }
+.sec { display: flex; flex-direction: column; gap: 12px; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--muted); }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 5px; }
+
+.months { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 900px) { .months { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 620px) { .months { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.month { background: var(--sheet); border: 1px solid var(--line); border-radius: 12px; padding: 10px; }
+.month h3 { margin: 0 0 6px; font-size: 14px; font-weight: 700; }
+.grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; font-family: var(--font-num); font-size: 11.5px; text-align: center; font-variant-numeric: tabular-nums; }
+.grid .dow { color: var(--muted); font-size: 10px; }
+.grid .d { padding: 3px 0; border-radius: 5px; }
+.d.sun, .d.hol { color: var(--red); font-weight: 600; }
+.d.sat { color: var(--muted); }
+.d.inspan { background: var(--span); }
+.d.leave { background: var(--leave); color: #fff; font-weight: 600; }
+.d.hol.inspan { background: var(--red-soft); }
+
+.share { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 620px) { .share { grid-template-columns: minmax(0, 1fr); } }
+.share img { width: 100%; border-radius: 12px; border: 1px solid var(--line); }
+.note { color: var(--muted); font-size: 13px; margin: 0; }
+.diary { background: var(--ink); color: var(--paper); border-radius: 14px; padding: 22px; display: flex; flex-direction: column; gap: 8px; }
+.diary h2 { color: var(--paper); }
+.diary p { margin: 0; max-width: 60ch; opacity: .85; }
+.diary .btn { background: var(--red); border-color: var(--red); color: #fff; align-self: flex-start; }
+.toast { min-height: 1.4em; font-size: 13px; color: var(--leave); }
+footer { color: var(--muted); font-size: 12px; }
+@media (prefers-reduced-motion: no-preference) { .brk { transition: transform .15s; } .brk:hover { transform: translateX(2px); } }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.seg button { border: 0; background: var(--paper); color: var(--ink); font: inherit; font-size: 13px; padding: 8px 12px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); font-weight: 700; }
+.lang { font-size: 13px; color: var(--muted); }
+.lang a { color: inherit; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">2027 PTO HACK PLANNER · <span class="lang"><a href="/">한국어</a></span></div>
+    <h1><span id="hLeave">15</span> PTO days can get you<br><span class="red" id="hDays">—</span> off in 2027</h1>
+    <p class="lede">We line up your PTO with 2027 holidays and weekends to find the bridge days that give you the longest breaks. Based on a Monday to Friday work week.</p>
+  </header>
+
+  <section class="control" aria-label="PTO days">
+    <label for="leaveRange">My PTO</label>
+    <div class="stepper">
+      <button type="button" id="minus" aria-label="One less day">−</button>
+      <output id="leaveOut" for="leaveRange">15</output>
+      <button type="button" id="plus" aria-label="One more day">+</button>
+    </div>
+    <input type="range" id="leaveRange" min="1" max="30" value="15">
+    <label>My holidays</label>
+    <div class="seg" role="group" aria-label="Holiday set">
+      <button type="button" id="setFed" aria-pressed="true">All 11 federal</button>
+      <button type="button" id="setPriv" aria-pressed="false">Typical company (7)</button>
+    </div>
+  </section>
+
+  <section class="result">
+    <div class="big">
+      <div class="eyebrow">TOTAL DAYS OFF IN BREAKS</div>
+      <div class="num"><span id="totalDays">0</span><small>days</small></div>
+      <div class="sub"><b id="usedLeave">0</b> PTO used · longest break <b id="longest">0</b> days · <b id="leftLeave">0</b> PTO left</div>
+      <div class="actions">
+        <button class="btn" type="button" id="copyBtn">Copy my plan</button>
+        <a class="btn ghost" href="#share">Share image</a>
+      </div>
+      <div class="toast" id="toast" role="status"></div>
+    </div>
+    <div class="sec">
+      <div class="eyebrow">YOUR BEST BREAKS</div>
+      <ul class="breaks" id="breaks"></ul>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>2027 calendar</h2>
+    <div class="legend">
+      <span><i style="background:var(--red)"></i>Holiday · Sunday</span>
+      <span><i style="background:var(--leave)"></i>Take PTO</span>
+      <span><i style="background:var(--span)"></i>Days off</span>
+    </div>
+    <div class="months" id="months"></div>
+  </section>
+
+  <section class="sec" id="share">
+    <h2>Share image</h2>
+    <div class="share">
+      <img id="shareImg" alt="Summary image of my 2027 PTO plan">
+      <div class="sec">
+        <p class="note">On your phone, press and hold the image to save it, then post it to your story. It updates when you change your PTO.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="diary">
+    <h2>Get this plan as a digital planner</h2>
+    <p>A 2027 GoodNotes and print planner with your PTO days and every long weekend already marked.</p>
+    <button class="btn" type="button" id="diaryBtn">Notify me at launch</button>
+    <div class="toast" id="diaryToast" role="status" style="color:inherit"></div>
+  </section>
+
+  <footer>Uses 2027 observed US federal holidays: Juneteenth on Fri 6/18, Independence Day on Mon 7/5, Christmas on Fri 12/24, and New Year's Day 2028 on Fri 12/31. "Typical company" means New Year's, Memorial Day, July 4th, Labor Day, Thanksgiving and the day after, and Christmas. Check your employer's calendar.</footer>
+</div>
+
+<script>
+(function () {
+  const YEAR = 2027;
+  const FED = {
+    "1-1": "New Year's Day", "1-18": "MLK Day", "2-15": "Presidents' Day", "5-31": "Memorial Day",
+    "6-18": "Juneteenth (observed)", "7-5": "Independence Day (observed)", "9-6": "Labor Day",
+    "10-11": "Columbus Day", "11-11": "Veterans Day", "11-25": "Thanksgiving",
+    "12-24": "Christmas (observed)", "12-31": "New Year's Day (observed)"
+  };
+  const PRIV = {
+    "1-1": "New Year's Day", "5-31": "Memorial Day", "7-5": "Independence Day (observed)", "9-6": "Labor Day",
+    "11-25": "Thanksgiving", "11-26": "Day after Thanksgiving", "12-24": "Christmas (observed)"
+  };
+  const DOW = ["S", "M", "T", "W", "T", "F", "S"];
+  const DOWL = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const MONL = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const MAXB = 30;
+
+  let days, N, wins, before, mode = "fed";
+  function build(HOL) {
+    days = [];
+    for (let t = Date.UTC(YEAR, 0, 1); t <= Date.UTC(YEAR + 1, 0, 2); t += 864e5) { // include the Jan 1–2, 2028 weekend so the Christmas break is not cut off
+      const d = new Date(t), m = d.getUTCMonth() + 1, dd = d.getUTCDate(), w = d.getUTCDay();
+      const hol = d.getUTCFullYear() === YEAR ? HOL[m + "-" + dd] || null : null;
+      days.push({ m, d: dd, w, hol, off: w === 0 || w === 6 || !!hol, next: d.getUTCFullYear() > YEAR });
+    }
+    N = days.length;
+    const blocks = [];
+    for (let i = 0; i < N; i++) {
+      if (!days[i].off) continue;
+      let j = i;
+      while (j + 1 < N && days[j + 1].off) j++;
+      blocks.push({ s: i, e: j });
+      i = j;
+    }
+    wins = [];
+    for (let i = 0; i < blocks.length; i++) {
+      let offCount = 0;
+      for (let j = i; j < blocks.length; j++) {
+        offCount += blocks[j].e - blocks[j].s + 1;
+        const s = blocks[i].s, e = blocks[j].e, len = e - s + 1;
+        if (len > 23) break;
+        const cost = len - offCount;
+        if (cost >= 1 && cost <= MAXB) wins.push({ s, e, len, cost, score: Math.round(Math.pow(len, 1.3) * 1000) - cost }); // favor longer breaks
+      }
+    }
+    wins.sort((a, b) => a.e - b.e || a.s - b.s);
+    const ends = wins.map(w => w.e);
+    before = wins.map(w => { let lo = 0, hi = wins.length; while (lo < hi) { const mid = (lo + hi) >> 1; if (ends[mid] < w.s) lo = mid + 1; else hi = mid; } return lo; });
+  }
+
+  function plan(B) {
+    const n = wins.length;
+    const dp = Array.from({ length: n + 1 }, () => new Array(B + 1).fill(0));
+    for (let k = 1; k <= n; k++) {
+      const w = wins[k - 1], q = before[k - 1];
+      for (let b = 0; b <= B; b++) {
+        let v = dp[k - 1][b];
+        if (w.cost <= b) { const t = dp[q][b - w.cost] + w.score; if (t > v) v = t; }
+        dp[k][b] = v;
+      }
+    }
+    const picked = [];
+    let k = n, b = B;
+    while (k > 0) {
+      if (dp[k][b] === dp[k - 1][b]) { k--; continue; }
+      const w = wins[k - 1]; picked.push(w); b -= w.cost; k = before[k - 1];
+    }
+    return picked.reverse();
+  }
+
+  const fmt = i => DOWL[days[i].w] + " " + MON[days[i].m - 1] + " " + days[i].d + (days[i].next ? ", 2028" : "");
+  function reason(w) {
+    const names = [];
+    for (let i = w.s; i <= w.e; i++) { const h = days[i].hol; if (h) { const base = h.replace(/ \(observed\)/, ""); if (!names.includes(base)) names.push(base); } }
+    return names.length ? names.join(" · ") : "Weekend bridge";
+  }
+
+  const $ = id => document.getElementById(id);
+  let current = { B: 15, picked: [] };
+
+  function render(B) {
+    const picked = plan(B);
+    current = { B, picked };
+    const used = picked.reduce((a, w) => a + w.cost, 0);
+    const total = picked.reduce((a, w) => a + w.len, 0);
+    const longest = picked.reduce((a, w) => Math.max(a, w.len), 0);
+    $("hLeave").textContent = B; $("leaveOut").textContent = B; $("leaveRange").value = B;
+    $("hDays").textContent = total + " days";
+    $("totalDays").textContent = total; $("usedLeave").textContent = used; $("longest").textContent = longest; $("leftLeave").textContent = B - used;
+
+    const ul = $("breaks"); ul.innerHTML = "";
+    picked.slice().sort((a, b) => b.len - a.len || a.s - b.s).forEach(w => {
+      const li = document.createElement("li"); li.className = "brk";
+      li.innerHTML = '<div class="days">' + w.len + '<small>days</small></div>' +
+        '<div><div class="when">' + fmt(w.s) + ' – ' + fmt(w.e) + '</div><div class="why">' + reason(w) + '</div></div>' +
+        '<span class="chip">' + w.cost + ' PTO</span>';
+      ul.appendChild(li);
+    });
+
+    const inSpan = new Uint8Array(N), leave = new Uint8Array(N);
+    picked.forEach(w => { for (let i = w.s; i <= w.e; i++) { inSpan[i] = 1; if (!days[i].off) leave[i] = 1; } });
+    const box = $("months"); box.innerHTML = "";
+    for (let m = 1; m <= 12; m++) {
+      const el = document.createElement("div"); el.className = "month";
+      let html = "<h3>" + MONL[m - 1] + "</h3><div class='grid'>" + DOW.map(x => "<div class='dow'>" + x + "</div>").join("");
+      const first = days.findIndex(x => x.m === m);
+      for (let k = 0; k < days[first].w; k++) html += "<div></div>";
+      for (let i = first; i < N && days[i].m === m && !days[i].next; i++) {
+        const x = days[i], c = ["d"];
+        if (x.w === 0) c.push("sun"); else if (x.w === 6) c.push("sat");
+        if (x.hol) c.push("hol");
+        if (inSpan[i]) c.push("inspan");
+        if (leave[i]) c.push("leave");
+        html += "<div class='" + c.join(" ") + "'" + (x.hol ? " title=\"" + x.hol + "\"" : "") + ">" + x.d + "</div>";
+      }
+      el.innerHTML = html + "</div>";
+      box.appendChild(el);
+    }
+    drawShare(B, total, longest, picked);
+    try { localStorage.setItem("pto-B", String(B)); localStorage.setItem("pto-mode", mode); } catch (e) {}
+  }
+
+  function drawShare(B, total, longest, picked) {
+    const W = 1080, H = 1350, c = document.createElement("canvas"); c.width = W; c.height = H;
+    const g = c.getContext("2d");
+    g.fillStyle = "#fbfaf7"; g.fillRect(0, 0, W, H);
+    g.fillStyle = "#d8342c"; g.fillRect(0, 0, W, 18);
+    g.fillStyle = "#6b7180"; g.font = "500 36px 'IBM Plex Sans', sans-serif"; g.fillText("2027 PTO HACK", 80, 130);
+    g.fillStyle = "#1c2230"; g.font = "80px 'Archivo Black', sans-serif"; g.fillText(B + " PTO days", 80, 250);
+    g.fillStyle = "#d8342c"; g.font = "180px 'Archivo Black', sans-serif"; g.fillText(total + " days", 72, 450);
+    g.fillStyle = "#1c2230"; g.font = "80px 'Archivo Black', sans-serif"; g.fillText("off", 80, 560);
+    g.fillStyle = "#6b7180"; g.font = "500 34px 'IBM Plex Sans', sans-serif"; g.fillText("Longest break: " + longest + " days", 80, 625);
+    const top = picked.slice().sort((a, b) => b.len - a.len || a.s - b.s).slice(0, 5);
+    let y = 720;
+    top.forEach(w => {
+      g.fillStyle = "#ffffff"; g.strokeStyle = "#e4e2dc"; g.lineWidth = 2;
+      g.beginPath(); g.roundRect ? g.roundRect(80, y, W - 160, 100, 20) : g.rect(80, y, W - 160, 100); g.fill(); g.stroke();
+      g.fillStyle = "#d8342c"; g.font = "52px 'Archivo Black', sans-serif"; g.fillText(w.len + "d", 110, y + 70);
+      g.fillStyle = "#1c2230"; g.font = "700 34px 'IBM Plex Sans', sans-serif"; g.fillText(fmt(w.s) + " – " + fmt(w.e), 280, y + 50);
+      g.fillStyle = "#6b7180"; g.font = "500 26px 'IBM Plex Sans', sans-serif"; g.fillText(reason(w) + " · " + w.cost + " PTO", 280, y + 84);
+      y += 116;
+    });
+    g.fillStyle = "#6b7180"; g.font = "500 28px 'IBM Plex Sans', sans-serif"; g.fillText("Try yours → yeoncha-2027.kohs1195123.workers.dev/en", 80, H - 60);
+    try { $("shareImg").src = c.toDataURL("image/png"); } catch (e) {}
+  }
+
+  function summaryText() {
+    const p = current.picked.slice().sort((a, b) => a.s - b.s);
+    const total = p.reduce((a, w) => a + w.len, 0);
+    return current.B + " PTO days = " + total + " days off in 2027!\n" +
+      p.map(w => "· " + fmt(w.s) + " – " + fmt(w.e) + ": " + w.len + " days (" + w.cost + " PTO)").join("\n") + "\n\nTry yours 👉 https://yeoncha-2027.kohs1195123.workers.dev/en/";
+  }
+  function toast(id, msg) { const t = $(id); t.textContent = msg; setTimeout(() => { if (t.textContent === msg) t.textContent = ""; }, 2500); }
+
+  function setMode(m) {
+    mode = m;
+    $("setFed").setAttribute("aria-pressed", m === "fed"); $("setPriv").setAttribute("aria-pressed", m === "priv");
+    build(m === "fed" ? FED : PRIV);
+    render(current.B);
+  }
+
+  $("leaveRange").addEventListener("input", e => render(+e.target.value));
+  $("minus").addEventListener("click", () => render(Math.max(1, current.B - 1)));
+  $("plus").addEventListener("click", () => render(Math.min(MAXB, current.B + 1)));
+  $("setFed").addEventListener("click", () => setMode("fed"));
+  $("setPriv").addEventListener("click", () => setMode("priv"));
+  $("copyBtn").addEventListener("click", () => {
+    const text = summaryText();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => toast("toast", "Copied. Paste it anywhere."), () => toast("toast", "Copy is blocked. Save the image below instead."));
+    } else toast("toast", "Copy is blocked. Save the image below instead.");
+  });
+  $("diaryBtn").addEventListener("click", () => toast("diaryToast", "Launching soon. Thanks for your interest!"));
+
+  try { const s = parseInt(localStorage.getItem("pto-B"), 10); if (s >= 1 && s <= MAXB) current.B = s; if (localStorage.getItem("pto-mode") === "priv") mode = "priv"; } catch (e) {}
+  setMode(mode);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => render(current.B));
+})();
+</script>
+
+</body>
+</html>
