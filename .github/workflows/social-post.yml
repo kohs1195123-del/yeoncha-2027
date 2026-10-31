@@ -4,6 +4,7 @@ on:
   schedule:
     - cron: "0 23 * * *"  # 한국 시간 오전 8시
     - cron: "0 9 * * *"   # 한국 시간 오후 6시
+    - cron: "0 14 * * *"  # 미국 동부 오전 9~10시, 영어 글
   workflow_dispatch:
 
 permissions:
@@ -23,6 +24,7 @@ jobs:
         env:
           THREADS_TOKEN: ${{ secrets.THREADS_TOKEN }}
           IG_TOKEN: ${{ secrets.IG_TOKEN }}
+          QUEUE: ${{ github.event.schedule == '0 14 * * *' && 'en' || 'ko' }}
         run: python threads/post_social.py
       - name: 게시 위치 저장
         if: always()

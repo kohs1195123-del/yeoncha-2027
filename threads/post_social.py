@@ -16,7 +16,8 @@ IG_API = "https://graph.instagram.com/v23.0"
 SITE = "https://yeoncha-2027.kohs1195123.workers.dev"
 HASHTAGS = "\n\n#연차 #연차꿀조합 #2027공휴일 #황금연휴 #직장인 #연휴 #휴가계획"
 HERE = os.path.dirname(os.path.abspath(__file__))
-POSTS = os.path.join(HERE, "posts.json")
+QUEUE = os.environ.get("QUEUE", "ko")  # "en"이면 영어 글 큐(posts_en.json)를 스레드에만 올린다
+POSTS = os.path.join(HERE, "posts_en.json" if QUEUE == "en" else "posts.json")
 STATE = os.path.join(HERE, "state.json")
 
 
@@ -49,7 +50,8 @@ def main():
     posts = json.load(open(POSTS, encoding="utf-8"))
     state = json.load(open(STATE)) if os.path.exists(STATE) else {}
     failed = []
-    for key, name, token in (("threads", "스레드", th), ("instagram", "인스타그램", ig)):
+    targets = (("threads_en", "스레드(영어)", th),) if QUEUE == "en" else (("threads", "스레드", th), ("instagram", "인스타그램", ig))
+    for key, name, token in targets:
         if not token:
             continue
         i = state.get(key, 0)  # 플랫폼마다 따로 기록해서, 나중에 연결한 쪽도 1번 글부터 올린다
@@ -57,7 +59,7 @@ def main():
             print(f"{name}: 올릴 글이 다 떨어졌어요. posts.json에 새 글을 추가해 주세요.")
             continue
         try:
-            pid = to_threads(posts[i], token) if key == "threads" else to_instagram(posts[i], i + 1, token)
+            pid = to_threads(posts[i], token) if key.startswith("threads") else to_instagram(posts[i], i + 1, token)
             print(f"{name}: {i + 1}/{len(posts)}번 게시 완료 ({pid})")
             state[key] = i + 1
         except Exception as e:  # 한쪽이 실패해도 다른 쪽은 올린다
