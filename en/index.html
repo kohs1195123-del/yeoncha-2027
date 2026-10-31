@@ -107,7 +107,7 @@ h2 { font-family: var(--font-display); font-weight: 400; font-size: 26px; margin
 .diary { background: var(--ink); color: var(--paper); border-radius: 14px; padding: 22px; display: flex; flex-direction: column; gap: 8px; }
 .diary h2 { color: var(--paper); }
 .diary p { margin: 0; max-width: 60ch; opacity: .85; }
-.diary .btn { background: var(--red); border-color: var(--red); color: #fff; align-self: flex-start; }
+.diary .btn { background: var(--red); border-color: var(--red); color: #fff; align-self: flex-start; text-decoration: none; }
 .toast { min-height: 1.4em; font-size: 13px; color: var(--leave); }
 footer { color: var(--muted); font-size: 12px; }
 @media (prefers-reduced-motion: no-preference) { .brk { transition: transform .15s; } .brk:hover { transform: translateX(2px); } }
@@ -181,9 +181,8 @@ footer { color: var(--muted); font-size: 12px; }
 
   <section class="diary">
     <h2>Get this plan as a digital planner</h2>
-    <p>A 2027 GoodNotes and print planner with your PTO days and every long weekend already marked.</p>
-    <button class="btn" type="button" id="diaryBtn">Notify me at launch</button>
-    <div class="toast" id="diaryToast" role="status" style="color:inherit"></div>
+    <p>A 2027 GoodNotes and print planner with your PTO days and every long weekend already marked. 60 versions (1–30 PTO days, federal or company holidays), 67 hyperlinked pages each.</p>
+    <a class="btn" href="https://kohs1195.gumroad.com/l/pto-2027" target="_blank" rel="noopener">Get the planner · $7.99</a>
   </section>
 
   <footer>Uses 2027 observed US federal holidays: Juneteenth on Fri 6/18, Independence Day on Mon 7/5, Christmas on Fri 12/24, and New Year's Day 2028 on Fri 12/31. "Typical company" means New Year's, Memorial Day, July 4th, Labor Day, Thanksgiving and the day after, and Christmas. Check your employer's calendar.</footer>
@@ -363,7 +362,6 @@ footer { color: var(--muted); font-size: 12px; }
       navigator.clipboard.writeText(text).then(() => toast("toast", "Copied. Paste it anywhere."), () => toast("toast", "Copy is blocked. Save the image below instead."));
     } else toast("toast", "Copy is blocked. Save the image below instead.");
   });
-  $("diaryBtn").addEventListener("click", () => toast("diaryToast", "Launching soon. Thanks for your interest!"));
 
   try { const s = parseInt(localStorage.getItem("pto-B"), 10); if (s >= 1 && s <= MAXB) current.B = s; if (localStorage.getItem("pto-mode") === "priv") mode = "priv"; } catch (e) {}
   setMode(mode);
