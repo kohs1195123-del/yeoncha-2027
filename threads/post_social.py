@@ -14,6 +14,7 @@ import urllib.request
 THREADS_API = "https://graph.threads.net/v1.0"
 IG_API = "https://graph.instagram.com/v23.0"
 SITE = "https://yeoncha-2027.kohs1195123.workers.dev"
+RAW = "https://raw.githubusercontent.com/kohs1195123-del/yeoncha-2027/main"
 HASHTAGS = "\n\n#연차 #연차꿀조합 #2027공휴일 #황금연휴 #직장인 #연휴 #휴가계획"
 HERE = os.path.dirname(os.path.abspath(__file__))
 QUEUE = os.environ.get("QUEUE", "ko")  # "en"이면 영어 글 큐(posts_en.json)를 스레드에만 올린다
@@ -57,7 +58,8 @@ def to_threads(text, token, n=None):
     """본문은 카드 이미지와 함께 링크 없이 올리고, 링크는 첫 답글로 단다 (링크 글은 노출이 줄어서)."""
     lang = "en" if QUEUE == "en" else "ko"
     body = "\n".join(l for l in text.split("\n") if "workers.dev" not in l and "gumroad.com" not in l).strip()
-    img = f"{SITE}/cards/{'en/' if lang == 'en' else ''}{n:02d}.png" if n else None
+    # 카드는 GitHub에서 바로 가져간다 (사이트 배포를 기다리지 않아도 됨)
+    img = f"{RAW}/cards/{'en/' if lang == 'en' else ''}{n:02d}.png" if n else None
     try:
         pid = publish({"media_type": "IMAGE", "image_url": img, "text": body} if img else {"media_type": "TEXT", "text": body}, token)
     except Exception as e:
