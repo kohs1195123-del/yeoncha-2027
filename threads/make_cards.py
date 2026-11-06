@@ -1,4 +1,4 @@
-"""posts.json의 글마다 인스타용 카드 이미지(1080x1350)를 cards/에 만든다."""
+"""posts.json의 글마다 카드 이미지(1080x1350)를 cards/NN.png에, posts_en.json은 cards/en/NN.png에 만든다."""
 import json
 import os
 
@@ -11,7 +11,10 @@ W, H = 1080, 1350
 PAPER, INK, MUTED, RED, LINE = "#fbfaf7", "#1c2230", "#6b7180", "#d8342c", "#e4e2dc"
 URL = "yeoncha-2027.kohs1195123.workers.dev"
 
-display = lambda s: ImageFont.truetype(os.path.join(FONTS, "bhs.ttf"), s)
+LANG = {"ko": dict(font="bhs.ttf", brand="2027 연차 꿀조합", cta="내 연차로 계산해 보기", url=URL),
+        "en": dict(font="archivo-black.ttf", brand="2027 PTO HACK", cta="Try your PTO number", url=URL + "/en")}
+FONT = "bhs.ttf"
+display = lambda s: ImageFont.truetype(os.path.join(FONTS, FONT), s)
 body = lambda s: ImageFont.truetype(os.path.join(FONTS, "plex-r.ttf"), s)
 bold = lambda s: ImageFont.truetype(os.path.join(FONTS, "plex-b.ttf"), s)
 
@@ -38,24 +41,29 @@ def wrap(draw, text, font, width):
     return lines
 
 
-def card(text, n, total):
+def card(text, lang="ko"):
+    global FONT
+    L = LANG[lang]
+    FONT = L["font"]
     img = Image.new("RGB", (W, H), PAPER)
     d = ImageDraw.Draw(img)
     d.rectangle([0, 0, W, 18], fill=RED)
-    d.text((80, 90), "2027 연차 꿀조합", font=bold(34), fill=MUTED)
+    d.text((80, 90), L["brand"], font=bold(34), fill=MUTED)
     paras = [p for p in text.split("\n\n") if p.strip()]
     head = paras[0].replace("\n", " ")
-    rest = [p for p in paras[1:] if "workers.dev" not in p and "http" not in p]
+    rest = ["\n".join(l for l in p.split("\n") if "workers.dev" not in l and "gumroad" not in l and "http" not in l) for p in paras[1:]]
+    rest = [p for p in rest if p.strip()]
     y = 210
-    for line in wrap(d, head, display(92), W - 160)[:4]:
-        d.text((80, y), line, font=display(92), fill=INK)
-        y += 114
+    hs = 92 if lang == "ko" else 72
+    for line in wrap(d, head, display(hs), W - 160)[:4]:
+        d.text((80, y), line, font=display(hs), fill=INK)
+        y += hs + 22
     y += 30
     d.line([80, y, W - 80, y], fill=LINE, width=3)
     y += 44
     for p in rest:
         for raw in p.split("\n"):
-            is_key = any(k in raw for k in ("→", "일 연휴", "연차"))
+            is_key = any(k in raw for k in ("→", "일 연휴", "연차", "PTO", "days off"))
             f = bold(48) if is_key else body(46)
             for line in wrap(d, raw, f, W - 160):
                 if y > H - 200:
@@ -64,17 +72,18 @@ def card(text, n, total):
                 y += 70
         y += 26
     d.rectangle([0, H - 140, W, H], fill=INK)
-    d.text((80, H - 92), "내 연차로 계산해 보기", font=bold(34), fill=PAPER)
-    d.text((W - 80, H - 92), URL, font=body(28), fill="#c9ccd3", anchor="ra")
+    d.text((80, H - 92), L["cta"], font=bold(34), fill=PAPER)
+    d.text((W - 80, H - 92), L["url"], font=body(28), fill="#c9ccd3", anchor="ra")
     return img
 
 
 def main():
-    posts = json.load(open(os.path.join(ROOT, "threads", "posts.json"), encoding="utf-8"))
-    os.makedirs(OUT, exist_ok=True)
-    for i, t in enumerate(posts, 1):
-        card(t, i, len(posts)).save(os.path.join(OUT, f"{i:02d}.png"), optimize=True)
-    print(f"{len(posts)}장 생성")
+    for lang, name, out in (("ko", "posts.json", OUT), ("en", "posts_en.json", os.path.join(OUT, "en"))):
+        posts = json.load(open(os.path.join(ROOT, "threads", name), encoding="utf-8"))
+        os.makedirs(out, exist_ok=True)
+        for i, t in enumerate(posts, 1):
+            card(t, lang).save(os.path.join(out, f"{i:02d}.png"), optimize=True)
+        print(f"{lang}: {len(posts)}장 생성")
 
 
 if __name__ == "__main__":

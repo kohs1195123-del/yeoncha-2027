@@ -30,10 +30,44 @@ def post(url, params):
         raise RuntimeError(f"{url} 실패: {e.read().decode(errors='replace')}") from None
 
 
-def to_threads(text, token):
-    c = post(f"{THREADS_API}/me/threads", {"media_type": "TEXT", "text": text, "access_token": token})
-    time.sleep(5)
+LINKS = {
+    "ko": "내 연차로 계산해 보기 👉 " + SITE + "\n2027 연차 다이어리 👉 https://kohs1195.gumroad.com/l/yeoncha2027",
+    "en": "Try your PTO number 👉 " + SITE + "/en/\n2027 PTO planner 👉 https://kohs1195.gumroad.com/l/pto-2027",
+}
+
+
+def get(url):
+    with urllib.request.urlopen(url, timeout=60) as r:
+        return json.load(r)
+
+
+def publish(params, token):
+    c = post(f"{THREADS_API}/me/threads", {**params, "access_token": token})
+    for _ in range(12):  # 이미지는 처리될 때까지 기다린다
+        time.sleep(5)
+        st = get(f"{THREADS_API}/{c['id']}?fields=status&access_token={token}").get("status")
+        if st == "FINISHED":
+            break
+        if st == "ERROR":
+            raise RuntimeError("Threads 컨테이너 처리 실패")
     return post(f"{THREADS_API}/me/threads_publish", {"creation_id": c["id"], "access_token": token})["id"]
+
+
+def to_threads(text, token, n=None):
+    """본문은 카드 이미지와 함께 링크 없이 올리고, 링크는 첫 답글로 단다 (링크 글은 노출이 줄어서)."""
+    lang = "en" if QUEUE == "en" else "ko"
+    body = "\n".join(l for l in text.split("\n") if "workers.dev" not in l and "gumroad.com" not in l).strip()
+    img = f"{SITE}/cards/{'en/' if lang == 'en' else ''}{n:02d}.png" if n else None
+    try:
+        pid = publish({"media_type": "IMAGE", "image_url": img, "text": body} if img else {"media_type": "TEXT", "text": body}, token)
+    except Exception as e:
+        print(f"이미지 게시 실패, 글만 올려요: {e}")
+        pid = publish({"media_type": "TEXT", "text": body}, token)
+    try:
+        publish({"media_type": "TEXT", "text": LINKS[lang], "reply_to_id": pid}, token)
+    except Exception as e:
+        print(f"링크 답글 실패: {e}")
+    return pid
 
 
 def to_instagram(text, n, token):
@@ -59,7 +93,7 @@ def main():
             print(f"{name}: 올릴 글이 다 떨어졌어요. posts.json에 새 글을 추가해 주세요.")
             continue
         try:
-            pid = to_threads(posts[i], token) if key.startswith("threads") else to_instagram(posts[i], i + 1, token)
+            pid = to_threads(posts[i], token, i + 1) if key.startswith("threads") else to_instagram(posts[i], i + 1, token)
             print(f"{name}: {i + 1}/{len(posts)}번 게시 완료 ({pid})")
             state[key] = i + 1
         except Exception as e:  # 한쪽이 실패해도 다른 쪽은 올린다
