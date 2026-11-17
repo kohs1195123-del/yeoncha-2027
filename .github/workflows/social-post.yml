@@ -8,7 +8,13 @@ on:
     - cron: "0 13 * * *"  # 한국 시간 밤 10시
     - cron: "0 14 * * *"  # 영어 글: 미국 동부 오전 9시
     - cron: "0 22 * * *"  # 영어 글: 미국 동부 오후 5시
+    - cron: "30 1 * * *"  # 이슈 글: 한국 시간 오전 10시 반
+    - cron: "30 11 * * *" # 이슈 글: 한국 시간 저녁 8시 반
   workflow_dispatch:
+    inputs:
+      queue:
+        description: "ko, en, hot 중 하나"
+        default: "ko"
 
 permissions:
   contents: write
@@ -27,7 +33,7 @@ jobs:
         env:
           THREADS_TOKEN: ${{ secrets.THREADS_TOKEN }}
           IG_TOKEN: ${{ secrets.IG_TOKEN }}
-          QUEUE: ${{ (github.event.schedule == '0 14 * * *' || github.event.schedule == '0 22 * * *') && 'en' || 'ko' }}
+          QUEUE: ${{ inputs.queue || ((github.event.schedule == '0 14 * * *' || github.event.schedule == '0 22 * * *') && 'en') || ((github.event.schedule == '30 1 * * *' || github.event.schedule == '30 11 * * *') && 'hot') || 'ko' }}
         run: python threads/post_social.py
       - name: 게시 위치 저장
         if: always()

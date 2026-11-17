@@ -18,7 +18,7 @@ RAW = "https://raw.githubusercontent.com/kohs1195123-del/yeoncha-2027/main"
 HASHTAGS = "\n\n#연차 #연차꿀조합 #2027공휴일 #황금연휴 #직장인 #연휴 #휴가계획"
 HERE = os.path.dirname(os.path.abspath(__file__))
 QUEUE = os.environ.get("QUEUE", "ko")  # "en"이면 영어 글 큐(posts_en.json)를 스레드에만 올린다
-POSTS = os.path.join(HERE, "posts_en.json" if QUEUE == "en" else "posts.json")
+POSTS = os.path.join(HERE, {"en": "posts_en.json", "hot": "hot.json"}.get(QUEUE, "posts.json"))
 STATE = os.path.join(HERE, "state.json")
 
 
@@ -57,6 +57,13 @@ def publish(params, token):
 def to_threads(text, token, n=None):
     """본문은 카드 이미지와 함께 링크 없이 올리고, 링크는 첫 답글로 단다 (링크 글은 노출이 줄어서)."""
     lang = "en" if QUEUE == "en" else "ko"
+    if QUEUE == "hot":  # 이슈 글: 카드는 id로 찾고, 링크 답글은 달지 않는다
+        img = f"{RAW}/cards/hot/{n}.png"
+        try:
+            return publish({"media_type": "IMAGE", "image_url": img, "text": text}, token)
+        except Exception as e:
+            print(f"이미지 게시 실패, 글만 올려요: {e}")
+            return publish({"media_type": "TEXT", "text": text}, token)
     body = "\n".join(l for l in text.split("\n") if "workers.dev" not in l and "gumroad.com" not in l).strip()
     # 카드는 GitHub에서 바로 가져간다 (사이트 배포를 기다리지 않아도 됨)
     img = f"{RAW}/cards/{'en/' if lang == 'en' else ''}{n:02d}.png" if n else None
@@ -86,7 +93,12 @@ def main():
     posts = json.load(open(POSTS, encoding="utf-8"))
     state = json.load(open(STATE)) if os.path.exists(STATE) else {}
     failed = []
-    targets = (("threads_en", "스레드(영어)", th),) if QUEUE == "en" else (("threads", "스레드", th), ("instagram", "인스타그램", ig))
+    if QUEUE == "hot":
+        targets = (("threads_hot", "스레드(이슈)", th),)
+    elif QUEUE == "en":
+        targets = (("threads_en", "스레드(영어)", th),)
+    else:
+        targets = (("threads", "스레드", th), ("instagram", "인스타그램", ig))
     for key, name, token in targets:
         if not token:
             continue
@@ -95,7 +107,12 @@ def main():
             print(f"{name}: 올릴 글이 다 떨어졌어요. posts.json에 새 글을 추가해 주세요.")
             continue
         try:
-            pid = to_threads(posts[i], token, i + 1) if key.startswith("threads") else to_instagram(posts[i], i + 1, token)
+            if not key.startswith("threads"):
+                pid = to_instagram(posts[i], i + 1, token)
+            elif QUEUE == "hot":
+                pid = to_threads(posts[i]["text"], token, posts[i]["id"])
+            else:
+                pid = to_threads(posts[i], token, i + 1)
             print(f"{name}: {i + 1}/{len(posts)}번 게시 완료 ({pid})")
             state[key] = i + 1
         except Exception as e:  # 한쪽이 실패해도 다른 쪽은 올린다

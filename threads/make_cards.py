@@ -177,7 +177,45 @@ def hook_card(h, lang):
     return img
 
 
+def news_card(h):
+    """이슈 글 카드: 어두운 배경, 태그, 큰 제목, 본문."""
+    global FONT
+    FONT = LANG["ko"]["font"]
+    img = Image.new("RGB", (W, H), INK)
+    d = ImageDraw.Draw(img)
+    tag = h["tag"]
+    tw = d.textlength(tag, font=bold(36))
+    d.rounded_rectangle([80, 90, 80 + tw + 48, 150], 30, fill=GOLD)
+    d.text((104, 98), tag, font=bold(36), fill=INK)
+    paras = [p for p in h["text"].split("\n\n") if p.strip()]
+    y = 210
+    for line in wrap(d, paras[0].replace("\n", " "), display(96), W - 160)[:4]:
+        d.text((80, y), line, font=display(96), fill="white")
+        y += 118
+    y += 30
+    d.rectangle([80, y, 200, y + 10], fill=RED)
+    y += 60
+    for p in paras[1:]:
+        for raw in p.split("\n"):
+            num = any(ch.isdigit() for ch in raw)
+            f = bold(48) if num else body(46)
+            for line in wrap(d, raw, f, W - 160):
+                if y > H - 120:
+                    break
+                d.text((80, y), line, font=f, fill=GOLD if num else "#e8e9ec")
+                y += 72
+        y += 30
+    d.text((80, H - 100), "2027 연차 꿀조합 · 직장인 이슈", font=bold(30), fill="#8a8f9c")
+    return img
+
+
 def main():
+    hot = json.load(open(os.path.join(ROOT, "threads", "hot.json"), encoding="utf-8"))
+    os.makedirs(os.path.join(OUT, "hot"), exist_ok=True)
+    for h in hot:
+        f = os.path.join(OUT, "hot", h["id"] + ".png")
+        if not os.path.exists(f):
+            news_card(h).save(f, optimize=True)
     hooks = json.load(open(os.path.join(ROOT, "threads", "hooks.json"), encoding="utf-8"))
     for lang, name, out in (("ko", "posts.json", OUT), ("en", "posts_en.json", os.path.join(OUT, "en"))):
         posts = json.load(open(os.path.join(ROOT, "threads", name), encoding="utf-8"))
